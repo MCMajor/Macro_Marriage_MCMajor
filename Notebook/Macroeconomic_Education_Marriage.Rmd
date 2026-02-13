@@ -35,25 +35,85 @@ Censusyears
 census_timeframes <- str_pad(Censusyears, width = 2, pad = "0")
 census_timeframes
 ```
+```{r}
+census_timeframes %>% map(\(x) read_csv(paste0("../data/ss",x,"pak.csv")))
+```
 
 
 ```{r}
 # Create Variable for census csv files
 # use map function to create a place holder for paste0 function for all integers of the vector to call all csv files for each year
-census_person <- census_timeframes %>% map(\(x) read_csv(paste0("../data/ss",x,"pak.csv")))
+# only include columns that we want to keep as dataset is large and needs 
+census_person <- census_timeframes %>% map(\(x) read_csv(paste0("../data/ss",x,"pak.csv")) %>% select(.,
+                                                    SERIALNO,
+                                                    AGEP,
+                                                    SEX,
+                                                    RAC1P,
+                                                    PINCP,
+                                                    SCHL,
+                                                    MAR,
+                                                    OCCP,
+                                                    SOCP) %>%
+                                             mutate(across(everything(), as.character)) %>% 
+                                                    mutate(YEAR = x,
+                                                           .before = PINCP))
 census_person
 ```
 
+
 ```{r}
-census_list <- census_person[1:24]
-census_list
+total_census_2001_2024 <- bind_rows(census_person)
+total_census_2001_2024
 ```
 
 
 ```{r}
-merged_census <- census_person %>%
-  reduce(full_join, by = "AGEP")
-merged_census
+total_census_2001_2024 <- total_census_2001_2024 %>%
+  mutate(across(c(AGEP,PINCP), as.numeric))
+total_census_2001_2024
+```
+```{r}
+total_census_2001_2024 <- total_census_2001_2024 %>% 
+  mutate(SEX = case_when(
+    SEX == "1" ~ "Male",
+    SEX == "2" ~ "Female",
+  )) %>% mutate(RAC1P = case_when(
+    RAC1P == "1" ~ "White",
+    RAC1P == "2" ~ "Black or African American",
+    RAC1P == "3" ~ "American Indian",
+    RAC1P == "4" ~ "Alaska Native",
+    RAC1P == "5" ~ "American Indian/Alaska Native tribes specified",
+    RAC1P == "6" ~ "Asian",
+    RAC1P == "7" ~ "Native Hawaiian/Pacific Islander",
+    RAC1P == "8" ~ "Other",
+    RAC1P == "9" ~ "Two or More Races"
+  )) %>% mutate(SCHL = case_when(
+    SCHL == "1" ~ "No schooling completed",
+    SCHL == "2" ~ "Preschool",
+    SCHL == "3" ~ "Kindergarten",
+    SCHL == "4" ~ "Grade 1",
+    SCHL == "5" ~ "Grade 2",
+    SCHL == "6" ~ "Grade 3",
+    SCHL == "7" ~ "Grade 4",
+    SCHL == "8" ~ "Grade 5",
+    SCHL == "9" ~ "Grade 6",
+    SCHL == "10" ~ "Grade 7",
+    SCHL == "11" ~ "Grade 8",
+    SCHL == "12" ~ "Grade 9",
+    SCHL == "13" ~ "Grade 10",
+    SCHL == "14" ~ "Grade 11",
+    SCHL == "15" ~ "Grade 12 (no diploma)",
+    SCHL == "16" ~ "High school diploma",
+    SCHL == "17" ~ "GED",
+    SCHL == "18" ~ "less than 1 year of college",
+    SCHL == "19" ~ "1+ years of college credit",
+    SCHL == "20" ~ "Associate's degree",
+    SCHL == "21" ~ "Bachelor's degree",
+    SCHL == "22" ~ "Master's degree",
+    SCHL == "23" ~ "Professional degree beyond a bachelor's degree",
+    SCHL == "24" ~ "Doctorate degree",
+  ))
+total_census_2001_2024
 ```
 
 

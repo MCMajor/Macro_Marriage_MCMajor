@@ -9,7 +9,6 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 
 ```{r}
 #install necessary packages and libraries 
-install.packages(stringr)
 library(tidyverse)
 library(stringr)
 library(dplyr)
@@ -52,8 +51,7 @@ census_person <- census_timeframes %>% map(\(x) read_csv(paste0("../data/ss",x,"
                                                     PINCP,
                                                     SCHL,
                                                     MAR,
-                                                    OCCP,
-                                                    SOCP) %>%
+                                                    ) %>%
                                              mutate(across(everything(), as.character)) %>% 
                                                     mutate(YEAR = x,
                                                            .before = PINCP))
@@ -63,16 +61,18 @@ census_person
 
 ```{r}
 total_census_2001_2024 <- bind_rows(census_person)
-total_census_2001_2024
+total_census_2001_2024 
 ```
 
 
 ```{r}
+# Change column values that do not have a categorical variable that is being represented numerically from character to numerical data 
 total_census_2001_2024 <- total_census_2001_2024 %>%
   mutate(across(c(AGEP,PINCP), as.numeric))
 total_census_2001_2024
 ```
 ```{r}
+# Change numeric values that represent categories within each relevant column to its proper categorical value
 total_census_2001_2024 <- total_census_2001_2024 %>% 
   mutate(SEX = case_when(
     SEX == "1" ~ "Male",
@@ -88,32 +88,338 @@ total_census_2001_2024 <- total_census_2001_2024 %>%
     RAC1P == "8" ~ "Other",
     RAC1P == "9" ~ "Two or More Races"
   )) %>% mutate(SCHL = case_when(
-    SCHL == "1" ~ "No schooling completed",
-    SCHL == "2" ~ "Preschool",
-    SCHL == "3" ~ "Kindergarten",
-    SCHL == "4" ~ "Grade 1",
-    SCHL == "5" ~ "Grade 2",
-    SCHL == "6" ~ "Grade 3",
-    SCHL == "7" ~ "Grade 4",
-    SCHL == "8" ~ "Grade 5",
-    SCHL == "9" ~ "Grade 6",
-    SCHL == "10" ~ "Grade 7",
-    SCHL == "11" ~ "Grade 8",
-    SCHL == "12" ~ "Grade 9",
-    SCHL == "13" ~ "Grade 10",
-    SCHL == "14" ~ "Grade 11",
-    SCHL == "15" ~ "Grade 12 (no diploma)",
-    SCHL == "16" ~ "High school diploma",
-    SCHL == "17" ~ "GED",
-    SCHL == "18" ~ "less than 1 year of college",
-    SCHL == "19" ~ "1+ years of college credit",
+    SCHL == "1" ~ "No diploma",
+    SCHL == "2" ~ "No diploma",
+    SCHL == "3" ~ "No diploma",
+    SCHL == "4" ~ "No diploma",
+    SCHL == "5" ~ "No diploma",
+    SCHL == "6" ~ "No diploma",
+    SCHL == "7" ~ "No diploma",
+    SCHL == "8" ~ "No diploma",
+    SCHL == "9" ~ "No diploma",
+    SCHL == "10" ~ "No diploma",
+    SCHL == "11" ~ "No diploma",
+    SCHL == "12" ~ "No diploma",
+    SCHL == "13" ~ "No diploma",
+    SCHL == "14" ~ "No diploma",
+    SCHL == "15" ~ "No diploma",
+    SCHL == "16" ~ "High school diploma/GED",
+    SCHL == "17" ~ "High school diploma/GED",
+    SCHL == "18" ~ "Some College",
+    SCHL == "19" ~ "Some College",
     SCHL == "20" ~ "Associate's degree",
-    SCHL == "21" ~ "Bachelor's degree",
-    SCHL == "22" ~ "Master's degree",
-    SCHL == "23" ~ "Professional degree beyond a bachelor's degree",
-    SCHL == "24" ~ "Doctorate degree",
+    SCHL == "21" ~ "Bachelor/Advanced degree",
+    SCHL == "22" ~ "Bachelor/Advanced degree",
+    SCHL == "23" ~ "Bachelor/Advanced degree",
+    SCHL == "24" ~ "Bachelor/Advanced degree",
+  )) %>% mutate(MAR = case_when(
+    MAR == "1" ~ "Married",
+    MAR == "2" ~ "Widowed",
+    MAR == "3" ~ "Divorced",
+    MAR == "4" ~ "Separated",
+    MAR == "5" ~ "Single"
+  )) %>% mutate(YEAR = case_when(
+    YEAR == "01" ~ "2001",
+    YEAR == "02" ~ "2002",
+    YEAR == "03" ~ "2003",
+    YEAR == "04" ~ "2004",
+    YEAR == "05" ~ "2005",
+    YEAR == "06" ~ "2006",
+    YEAR == "07" ~ "2007",
+    YEAR == "08" ~ "2008",
+    YEAR == "09" ~ "2009",
+    YEAR == "10" ~ "2010",
+    YEAR == "11" ~ "2011",
+    YEAR == "12" ~ "2012",
+    YEAR == "13" ~ "2013",
+    YEAR == "14" ~ "2014",
+    YEAR == "15" ~ "2015",
+    YEAR == "16" ~ "2016",
+    YEAR == "17" ~ "2017",
+    YEAR == "18" ~ "2018",
+    YEAR == "19" ~ "2019",
+    YEAR == "20" ~ "2020",
+    YEAR == "21" ~ "2021",
+    YEAR == "22" ~ "2022",
+    YEAR == "23" ~ "2023",
+    YEAR == "24" ~ "2024"
   ))
 total_census_2001_2024
+```
+
+```{r}
+# Change column names 
+total_census_2001_2024 <- total_census_2001_2024 %>% 
+  rename(Education_lvl = SCHL,
+         Income = PINCP,
+         Race = RAC1P,
+         Age = AGEP,
+         Serial.No. = SERIALNO
+         )
+total_census_2001_2024 <- total_census_2001_2024 %>%
+  rename(Year = YEAR,
+         Sex = SEX)
+total_census_2001_2024 <- total_census_2001_2024 %>% 
+  rename(Annual_Income = Income,
+         Marriage = MAR)
+# Eliminate anyone who is 15 yrs. old or younger and arrange in descending order by age
+census_df <- total_census_2001_2024 %>%
+  filter(Age > 20) %>%
+  filter(Age < 61) %>% 
+  arrange(Age)
+census_df
+```
+
+
+```{r}
+install.packages("scales")
+library(scales)
+census_mar_rate_ysr <- census_df %>% group_by(Year, Sex, Race) %>% count(Marriage)
+census_mar_rate_ysr
+census_mar_rate_ysr <- census_mar_rate_ysr %>% ungroup() %>% group_by(Year) %>%
+  mutate(Percent = n / sum(n))
+census_mar_rate_ysr
+census_mar_rate_ysr <- census_mar_rate_ysr %>%
+  mutate(Percent_value = label_percent(accuracy = 0.01)(Percent)) %>%
+  mutate(Percentage = Percent * 100)
+census_mar_rate_ysr
+```
+
+
+
+```{r}
+# Groupby year and determine the marriage rate
+census_df
+census_yr_grp <- census_df %>% group_by(Year, Marriage) %>% count()
+census_yr_grp <- census_yr_grp %>% ungroup() %>% group_by(Year) %>%
+  mutate(Percent = n / sum(n))
+census_yr_grp
+# Change Percent column to reflect as actual percentage 
+census_yr_grp <- census_yr_grp %>%
+  mutate(Percent_value = label_percent(accuracy = 0.01)(Percent)) %>%
+  mutate(Percentage = Percent * 100)
+census_yr_grp
+# Filter by Married percentage to get marriage rate for each year
+census_marriage_rate <- census_yr_grp %>% 
+  filter(Marriage == "Married")
+census_marriage_rate
+```
+
+```{r}
+library(lubridate)
+# Bring in GDP dataframe 
+GDP_raw <- read_csv('../Data/GDP.csv')
+GDP_raw
+# Rename date column 
+GDP_raw <- GDP_raw %>% rename(Date = observation_date)
+# Split date column into separate Year, Month, and Day column
+GDP_spread <- GDP_raw %>%
+  separate(Date, into = c("Year", "Month", "Day"), sep = "-")
+# select only necessary columns
+GDP_fred <- GDP_spread %>% select(
+  Year,
+  GDP
+) 
+GDP_fred
+# Get Average of GDP for each year
+GDP_fred <- GDP_fred %>% group_by(Year) %>%
+  summarise(Avg_gdp = mean(GDP))
+GDP_fred <- GDP_fred %>% filter(Year > 2000) %>%
+  filter(Year < 2025)
+GDP_fred
+```
+```{r}
+#Combine GDP and Marriage rate df
+gdp_mar_rate_df <- cbind(census_marriage_rate, GDP_fred)
+gdp_mar_rate_df
+
+```
+
+```{r}
+# Fit a linear regression model 
+gdp_mar_lm <- lm(data = gdp_mar_rate_df,
+                 Marriage ~ Avg_gdp,
+                 family = "poisson"
+                 )
+gdp_mar_lm
+```
+
+
+```{r}
+ggplot(GDP_fred,
+       aes(x = Year, y = Avg_gdp, colour = Year)
+       ) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+```
+
+
+```{r}
+ggplot(census_yr_grp,
+       aes(x = Year, y = Percentage, colour = Marriage)) +
+  geom_point() +
+  scale_y_continuous(breaks = seq(0, 70, by = 5),
+                     labels = scales::percent_format(scale = 1)) +
+    theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+```
+
+
+```{r}
+# Plot Marriage rate for each year
+census_marriage_rate
+marriage_plot <- ggplot() +
+  geom_point(data = census_marriage_rate, aes(x = Year, y = Percent_value)) +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+marriage_plot
+```
+```{r}
+census_yr_grp
+# Filter by Married percentage to get marriage rate for each year
+census_divorce_rate <- census_yr_grp %>% 
+  filter(Marriage == "Divorced")
+census_divorce_rate
+```
+```{r}
+divorce_plot <- ggplot(census_divorce_rate) + 
+  aes(x = Year, y = Percentage, group = 1) +
+  geom_point() +
+  scale_y_continuous(breaks = seq(0, 20, by = 1),
+                     labels = scales::percent_format(scale = 1)) +
+    theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+divorce_plot
+```
+```{r}
+ggplot() +
+  geom_line(data = census_marriage_rate, aes(x = Year, y = Percentage, group = 1), color = "red") +
+  geom_line(data = census_divorce_rate, aes(x = Year, y = Percentage, group = 1), color = "blue") +
+   scale_y_continuous(breaks = seq(0, 70, by = 2.5),
+                     labels = scales::percent_format(scale = 1)) +
+    theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+```
+
+
+```{r}
+# Create rate column for marriage by category
+census_by_race <- census_df %>% group_by(Race) %>% count(Marriage) %>%
+  mutate(Rate =n / sum(n))
+census_by_race
+# Change rates into clear percentages
+census_marriage_by_race <- census_by_race %>% 
+  mutate(Percentage = label_percent(accuracy = 0.01)(Rate)) %>%
+  mutate(Percent = Rate * 100)
+census_marriage_by_race
+# Filter by Married to get the total marriage rate for each race from 2001 to 2024 from ages 21 to 60
+marriage_rate_by_race <- census_marriage_by_race %>% 
+  filter(Marriage == "Married")
+marriage_rate_by_race
+```
+```{r}
+# Create a visualization showing marriage rate by race
+ggplot(marriage_rate_by_race, aes(x = Race, y = Percent, colour = Race)) +
+  geom_col() +
+  scale_y_continuous(breaks = seq(0, 100, by = 5),
+                     labels = scales::percent_format(scale = 1)) +
+    theme(axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1)) +
+  labs(title = "Marriage Rate By Race")
+```
+
+
+```{r}
+# Look at marriage rate by race for each year
+# groupby year and race and count the total for Married categories
+Marriage_yr_race <- census_df %>% 
+  group_by(Year, Race) %>% count(Marriage)
+Marriage_yr_race
+# Get rate for each married category
+Marriage_yr_race <- Marriage_yr_race %>% 
+  mutate(Rate = n / sum(n))
+Marriage_yr_race
+# Format for percentage 
+Mar_yr_race_perc <- Marriage_yr_race %>% 
+  mutate(Percent_value = paste0(round(Rate * 100, 2), "%"))
+Mar_yr_race_perc
+# Filter down to Married value for each year 
+Mar_rt_race_yr <- Mar_yr_race_perc %>% 
+  filter(Marriage == "Married")
+# Print table for marriage/divorce rate per year by race 
+Mar_rt_race_yr
+```
+
+```{r}
+Young_Married <- census_df %>% filter(Age >= 21) %>%
+  filter(Age <= 25) %>% 
+  group_by(Year)
+Young_Married 
+Young_Married %>% group_by(Marriage) %>% count()
+```
+
+
+```{r}
+census_df
+census_df %>% group_by(
+  Marriage) %>% filter(
+    Annual_Income < 60000
+  ) %>% filter(
+    Annual_Income > 30000)
+```
+```{r}
+census_df %>% group_by(
+  Marriage) %>% filter(
+    Annual_Income < 30000
+  ) 
+```
+
+
+```{r}
+# Plot marriage per year by race (maybe a scatter plot) to showcase how marriage rates have changed among racial demographics over the past 20+ years
+
+
+```
+
+
+```{r}
+# Create column for regression model 
+mar_lm <- census_df %>%
+  mutate(Married = Marriage == "Married") %>%
+  mutate(Divorced = Marriage == "Divorced") %>% 
+  mutate(Single = Marriage == "Single")
+mar_lm
+```
+
+```{r}
+married_edu_glm <- glm(data = mar_lm, Married ~ Education_lvl, family = "poisson")
+married_edu_glm
+```
+
+
+```{r}
+summary(married_edu_glm)
+```
+```{r}
+R_squared <- 1 - married_edu_glm$deviance/married_edu_glm$null.deviance
+R_squared
+```
+```{r}
+install.packages("rcompanion")
+library(rcompanion)
+nagelkerke(married_edu_glm)
+```
+
+
+```{r}
+mar_income_lm <- glm(data = mar_lm, Married ~ Annual_Income, family = "poisson")
+mar_income_lm
+summary(mar_income_lm)
+```
+
+
+```{r}
+library(ggthemes)
+```
+
+
+```{r}
+
 ```
 
 

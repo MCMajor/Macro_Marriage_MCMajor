@@ -79,12 +79,12 @@ total_census_2001_2024 <- total_census_2001_2024 %>%
     SEX == "2" ~ "Female",
   )) %>% mutate(RAC1P = case_when(
     RAC1P == "1" ~ "White",
-    RAC1P == "2" ~ "Black or African American",
+    RAC1P == "2" ~ "Black/African American",
     RAC1P == "3" ~ "American Indian",
     RAC1P == "4" ~ "Alaska Native",
-    RAC1P == "5" ~ "American Indian/Alaska Native tribes specified",
+    RAC1P == "5" ~ "American Indian/Alaska Native",
     RAC1P == "6" ~ "Asian",
-    RAC1P == "7" ~ "Native Hawaiian/Pacific Islander",
+    RAC1P == "7" ~ "Hawaiian/Pacific Islander",
     RAC1P == "8" ~ "Other",
     RAC1P == "9" ~ "Two or More Races"
   )) %>% mutate(SCHL = case_when(
@@ -174,17 +174,53 @@ census_df
 ```{r}
 install.packages("scales")
 library(scales)
-census_mar_rate_ysr <- census_df %>% group_by(Year, Sex, Race) %>% count(Marriage)
+census_mar_rate_ysr <- census_df %>% group_by(Sex, Race) %>% count(Marriage)
 census_mar_rate_ysr
-census_mar_rate_ysr <- census_mar_rate_ysr %>% ungroup() %>% group_by(Year) %>%
+census_mar_rate_ysr <- census_mar_rate_ysr %>% ungroup() %>% group_by(Race, Sex) %>%
   mutate(Percent = n / sum(n))
 census_mar_rate_ysr
 census_mar_rate_ysr <- census_mar_rate_ysr %>%
   mutate(Percent_value = label_percent(accuracy = 0.01)(Percent)) %>%
   mutate(Percentage = Percent * 100)
 census_mar_rate_ysr
+
 ```
 
+
+```{r}
+ggplot(census_mar_rate_ysr, aes(x = Race, y = Percentage, fill = Marriage)) +
+  geom_bar(position = "dodge", stat = "identity", width = 0.9) +
+  facet_wrap(~Sex) +
+  theme(axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1)) +
+  scale_y_continuous(breaks = seq(0, 150, by = 10),
+                     labels = scales::percent_format(scale = 1)) +
+  labs(title = "Aggregated Marital status rate by race & sex from 2001-2004")
+```
+
+
+
+```{r}
+census_mar_rate_yse <- census_df %>% group_by(Sex, Education_lvl) %>% count(Marriage)
+census_mar_rate_yse
+census_mar_rate_yse <- census_mar_rate_yse %>% ungroup() %>% group_by(Education_lvl, Sex) %>%
+  mutate(Percent = n / sum(n))
+census_mar_rate_yse <- census_mar_rate_yse %>% drop_na(Education_lvl)
+census_mar_rate_yse <- census_mar_rate_yse %>%
+  mutate(Percent_value = label_percent(accuracy = 0.01)(Percent)) %>%
+  mutate(Percentage = Percent * 100)
+census_mar_rate_yse
+```
+
+
+```{r}
+ggplot(census_mar_rate_yse, aes(x = Education_lvl, y = Percentage, fill = Marriage)) +
+  geom_bar(position = "dodge", stat = "identity", width = 0.9) +
+  facet_wrap(~Sex) +
+  theme(axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1)) +
+  scale_y_continuous(breaks = seq(0, 150, by = 10),
+                     labels = scales::percent_format(scale = 1)) +
+  labs(title = "Aggregated Marital status rate by educattion & sex from 2001-2004")
+```
 
 
 ```{r}
@@ -206,15 +242,55 @@ census_marriage_rate
 ```
 
 ```{r}
+ # Groupby year and determine the rate for each marriage status category
+census_df
+census_yr_grp <- census_df %>% group_by(Year, Marriage) %>% count()
+census_yr_grp <- census_yr_grp %>% ungroup() %>% group_by(Year) %>%
+  mutate(Percent = n / sum(n))
+census_yr_grp
+# Change Percent column to reflect as actual percentage 
+census_yr_grp <- census_yr_grp %>%
+  mutate(Percent_value = label_percent(accuracy = 0.01)(Percent)) %>%
+  mutate(Percentage = Percent * 100)
+census_yr_grp
+# Filter by "Divorced" percentage to get divorce rate for each year
+census_divorce_rate <- census_yr_grp %>% 
+  filter(Marriage == "Divorced")
+census_divorce_rate
+```
+
+```{r}
+ # Groupby year and determine the marriage rate
+census_df
+census_yr_grp <- census_df %>% group_by(Year, Marriage) %>% count()
+census_yr_grp <- census_yr_grp %>% ungroup() %>% group_by(Year) %>%
+  mutate(Percent = n / sum(n))
+census_yr_grp
+# Change Percent column to reflect as actual percentage 
+census_yr_grp <- census_yr_grp %>%
+  mutate(Percent_value = label_percent(accuracy = 0.01)(Percent)) %>%
+  mutate(Percentage = Percent * 100)
+census_yr_grp
+# Filter by "Single" percentage to get single rate for each year
+census_single_rate <- census_yr_grp %>% 
+  filter(Marriage == "Single")
+census_single_rate
+```
+
+
+```{r}
 library(lubridate)
 # Bring in GDP dataframe 
-GDP_raw <- read_csv('../Data/GDP.csv')
+GDP_raw <- read_csv('../Data/Real GDP PerCapita.csv')
 GDP_raw
 # Rename date column 
-GDP_raw <- GDP_raw %>% rename(Date = observation_date)
+GDP_raw <- GDP_raw %>% rename(Date = observation_date,
+                              GDP = A939RX0Q048SBEA)
+GDP_raw
 # Split date column into separate Year, Month, and Day column
 GDP_spread <- GDP_raw %>%
   separate(Date, into = c("Year", "Month", "Day"), sep = "-")
+GDP_spread
 # select only necessary columns
 GDP_fred <- GDP_spread %>% select(
   Year,
@@ -223,44 +299,118 @@ GDP_fred <- GDP_spread %>% select(
 GDP_fred
 # Get Average of GDP for each year
 GDP_fred <- GDP_fred %>% group_by(Year) %>%
-  summarise(Avg_gdp = mean(GDP))
+  summarise(total_gdp = sum(GDP))
 GDP_fred <- GDP_fred %>% filter(Year > 2000) %>%
   filter(Year < 2025)
 GDP_fred
 ```
+
+```{r}
+# Bring in GDP dataframe 
+Interest_rates <- read_csv('../Data/FredfundsINTEREST.csv')
+Interest_rates
+# Rename date column 
+ir_raw <- Interest_rates %>% rename(Date = observation_date,
+                              interest_rate = FEDFUNDS)
+ir_raw
+# Split date column into separate Year, Month, and Day column
+ir_raw <- ir_raw %>%
+  separate(Date, into = c("Year", "Month", "Day"), sep = "-")
+ir_raw
+# select only necessary columns
+ir_new <- ir_raw %>% select(
+  Year,
+  interest_rate
+) 
+ir_new
+# Get Average of GDP for each year
+annual_interest <- ir_new %>% group_by(Year) %>%
+  summarise(avg_interest_rate = mean(interest_rate))
+annual_interest
+```
+
+
+```{r}
+# Combine GDP and Marriage rate df
+ir_divorce_rate_df <- cbind(census_divorce_rate, annual_interest)
+ir_divorce_rate_df
+# get rid of 2nd Yearcolumn
+ir_divorce_rate_df$Year...7 <- NULL
+ir_divorce_rate_df
+# rename Year...1 column to Year
+ir_divorce_rate_df <- rename(ir_divorce_rate_df, Year = Year...1)
+ir_divorce_rate_df
+```
+```{r}
+# Plot Married rate and avg_gdp
+ggplot(ir_divorce_rate_df, aes(x = Percentage, y = avg_interest_rate, colour = Year, size = Year)) +
+         geom_point() +
+  scale_x_continuous(breaks = seq(0, 70, by = 2.5),
+                     labels = scales::percent_format(scale = 1))
+```
+
+
+
+```{r}
+# Combine GDP and Marriage rate df
+gdp_singl_rate_df <- cbind(census_single_rate, GDP_fred)
+gdp_singl_rate_df
+# get rid of 2nd Yearcolumn
+gdp_singl_rate_df$Year...7 <- NULL
+# rename Year...1 column to Year
+gdp_singl_rate_df <- rename(gdp_singl_rate_df, Year = Year...1)
+gdp_singl_rate_df
+```
+
+```{r}
+# Plot Married rate and avg_gdp
+ggplot(gdp_singl_rate_df, aes(x = Percentage, y = total_gdp, colour = Year, size = Year)) +
+         geom_point() +
+  scale_x_continuous(breaks = seq(0, 70, by = 2.5),
+                     labels = scales::percent_format(scale = 1))
+```
+
+
 ```{r}
 #Combine GDP and Marriage rate df
 gdp_mar_rate_df <- cbind(census_marriage_rate, GDP_fred)
+gdp_mar_rate_df$Year...7 <- NULL
+gdp_mar_rate_df <- rename(gdp_mar_rate_df, Year = Year...1)
 gdp_mar_rate_df
 
 ```
 
+
 ```{r}
-# Fit a linear regression model 
-gdp_mar_lm <- lm(data = gdp_mar_rate_df,
-                 Marriage ~ Avg_gdp,
-                 family = "poisson"
-                 )
-gdp_mar_lm
+# Plot Married rate and avg_gdp
+ggplot(gdp_mar_rate_df, aes(x = Percentage, y = total_gdp, colour = Year, size = Year)) +
+         geom_point() +
+  scale_x_continuous(breaks = seq(0, 70, by = 2.5),
+                     labels = scales::percent_format(scale = 1))
+       
+
 ```
-
-
 ```{r}
-ggplot(GDP_fred,
-       aes(x = Year, y = Avg_gdp, colour = Year)
+GDP_plot <- ggplot(GDP_fred,
+       aes(x = Year, y = total_gdp)
        ) +
   geom_point() +
-  theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+  theme(axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1))
+GDP_plot
+ggsave("GDP_plot.png", plot = GDP_plot, width = 10, height = 6, units = "in", dpi = 300)
+
 ```
 
 
 ```{r}
-ggplot(census_yr_grp,
+Marriage_category <- ggplot(census_yr_grp,
        aes(x = Year, y = Percentage, colour = Marriage)) +
   geom_point() +
   scale_y_continuous(breaks = seq(0, 70, by = 5),
                      labels = scales::percent_format(scale = 1)) +
     theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+Marriage_category
+ggsave("mar_category_plot.png", plot = Marriage_category, width = 10, height = 6, units = "in", dpi = 300)
 ```
 
 
@@ -269,9 +419,14 @@ ggplot(census_yr_grp,
 census_marriage_rate
 marriage_plot <- ggplot() +
   geom_point(data = census_marriage_rate, aes(x = Year, y = Percent_value)) +
-  theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
+  theme(axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1))
 marriage_plot
+#Save Plot
+ggsave("mar_rate_plot.png", plot = marriage_plot, width = 10, height = 6, units = "in", dpi = 300)
 ```
+
+
+
 ```{r}
 census_yr_grp
 # Filter by Married percentage to get marriage rate for each year
@@ -288,20 +443,12 @@ divorce_plot <- ggplot(census_divorce_rate) +
     theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
 divorce_plot
 ```
-```{r}
-ggplot() +
-  geom_line(data = census_marriage_rate, aes(x = Year, y = Percentage, group = 1), color = "red") +
-  geom_line(data = census_divorce_rate, aes(x = Year, y = Percentage, group = 1), color = "blue") +
-   scale_y_continuous(breaks = seq(0, 70, by = 2.5),
-                     labels = scales::percent_format(scale = 1)) +
-    theme(axis.text.x = element_text(angle = 35, hjust = 1, vjust = 1))
-```
 
 
 ```{r}
 # Create rate column for marriage by category
 census_by_race <- census_df %>% group_by(Race) %>% count(Marriage) %>%
-  mutate(Rate =n / sum(n))
+  mutate(Rate = n / sum(n))
 census_by_race
 # Change rates into clear percentages
 census_marriage_by_race <- census_by_race %>% 
@@ -315,12 +462,15 @@ marriage_rate_by_race
 ```
 ```{r}
 # Create a visualization showing marriage rate by race
-ggplot(marriage_rate_by_race, aes(x = Race, y = Percent, colour = Race)) +
+Marriage_by_race <- ggplot(marriage_rate_by_race, aes(x = Race, y = Percent, colour = Race)) +
   geom_col() +
   scale_y_continuous(breaks = seq(0, 100, by = 5),
                      labels = scales::percent_format(scale = 1)) +
     theme(axis.text.x = element_text(angle = 55, hjust = 1, vjust = 1)) +
   labs(title = "Marriage Rate By Race")
+Marriage_by_race
+ggsave("mar_race_barchart.png", plot = Marriage_by_race, width = 10, height = 6, units = "in", dpi = 300)
+
 ```
 
 
@@ -345,29 +495,23 @@ Mar_rt_race_yr <- Mar_yr_race_perc %>%
 Mar_rt_race_yr
 ```
 
+
+
 ```{r}
 Young_Married <- census_df %>% filter(Age >= 21) %>%
-  filter(Age <= 25) %>% 
+  filter(Age <= 30) %>% 
   group_by(Year)
 Young_Married 
 Young_Married %>% group_by(Marriage) %>% count()
 ```
-
-
-```{r}
-census_df
-census_df %>% group_by(
-  Marriage) %>% filter(
-    Annual_Income < 60000
-  ) %>% filter(
-    Annual_Income > 30000)
-```
 ```{r}
 census_df %>% group_by(
   Marriage) %>% filter(
-    Annual_Income < 30000
-  ) 
+    Annual_Income > 90000
+  ) %>% count(Marriage) %>%
+  mutate(Rate = n /sum(n))
 ```
+
 
 
 ```{r}
@@ -386,8 +530,79 @@ mar_lm <- census_df %>%
 mar_lm
 ```
 
+
+
 ```{r}
-married_edu_glm <- glm(data = mar_lm, Married ~ Education_lvl, family = "poisson")
+# Merge lm df with gdp df for regression modeling 
+
+mar_gdp_df <- inner_join(mar_lm, GDP_fred, by = "Year")
+mar_gdp_df
+#let look at single, married and divorced women by marriage status and income color = race, shape = education level 
+Women <- mar_gdp_df %>%
+  filter(Sex == "Female") 
+Women %>% filter(
+  Married == TRUE
+)
+  
+```
+
+
+```{r}
+library(scales)
+ggplot(Women) +
+  geom_col(aes(x = Education_lvl, y = Annual_Income, colour = Marriage)) +
+  scale_y_continuous(labels = scales::comma) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+```{r}
+married_gdp_lm <- glm(data = mar_gdp_df,
+    Married ~ total_gdp,
+    family = "binomial")
+married_gdp_lm
+```
+```{r}
+summary(married_gdp_lm)
+```
+```{r}
+nagelkerke(married_gdp_lm)
+```
+```{r}
+married_gdp_lm %>% coef() %>% exp()
+```
+```{r}
+predict(married_gdp_lm, newdata = tibble(total_gdp = c(140500)), type = 'response')
+```
+
+
+```{r}
+mar_sing_lm <- glm(data = mar_gdp_df,
+    Married ~ Single,
+    family = "binomial")
+summary(mar_sing_lm)
+```
+```{r}
+nagelkerke(mar_sing_lm)
+# Very strong fit as we saw in the graph plotting marriage categories for a composite of all the data within our age parameters
+```
+
+
+```{r}
+install.packages("rcompanion")
+library(rcompanion)
+single_gdp_lm <- glm(data = mar_gdp_df,
+    Single ~ total_gdp,
+    family = "binomial")
+summary(single_gdp_lm)
+```
+```{r}
+nagelkerke(single_gdp_lm)
+```
+
+
+```{r}
+married_edu_glm <- glm(data = mar_lm, Married ~ Education_lvl, family = "binomial")
 married_edu_glm
 ```
 
@@ -395,6 +610,25 @@ married_edu_glm
 ```{r}
 summary(married_edu_glm)
 ```
+```{r}
+nagelkerke(married_edu_glm)
+```
+```{r}
+married_edu_glm %>% coef() %>% exp()
+```
+
+
+```{r}
+div_sing_mar <- glm(data = mar_gdp_df,
+    Married ~ Single + Divorced,
+    family = "binomial")
+summary(div_sing_mar)
+```
+```{r}
+nagelkerke(div_sing_mar)
+```
+
+
 ```{r}
 R_squared <- 1 - married_edu_glm$deviance/married_edu_glm$null.deviance
 R_squared
@@ -407,14 +641,12 @@ nagelkerke(married_edu_glm)
 
 
 ```{r}
-mar_income_lm <- glm(data = mar_lm, Married ~ Annual_Income, family = "poisson")
+mar_income_lm <- glm(data = mar_lm, Married ~ Annual_Income, family = "binomial")
 mar_income_lm
 summary(mar_income_lm)
 ```
 
 
-```{r}
-library(ggthemes)
 ```
 
 
